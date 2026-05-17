@@ -1,0 +1,194 @@
+---
+title: "UTS - MPML"
+author: "Jihan Nisrina Andisti - 24611013"
+date: "2026-05-17"
+output:
+  pdf_document: default
+  html_document: default
+---
+
+# Analisis clustering dilakukan untuk mengelompokkan kabupaten/kota di D.I. Yogyakarta berdasarkan indikator sosial-ekonomi dan pembangunan manusia.
+
+# Langkah pertama dataset diimpor ke dalam R dengan menggunakan fungsi 'read.csv()' untuk membaca file CSV yang telah disusun dari data BPS
+```{r}
+cluster_diy <- read.csv("C:\\Users\\jihan nisrina andist\\OneDrive - Universitas Islam Indonesia\\Dokumen\\Semester 4\\mpml\\data_cluster_diy.csv", sep=";")
+cluster_diy
+```
+
+# Kemudian lakukan pengecekan struktur data
+```{r}
+str(cluster_diy)
+```
+
+```{r}
+summary(cluster_diy)
+```
+# Langkah ini dilakukan agar memastikan data bernilai numerik dan juga memastikan bahwa data tidak memiliki nilai yang hilang atau missing value
+
+## Mengambil Variabel Numerik
+```{r}
+data_numeric <- cluster_diy[,2:5]
+
+data_numeric
+```
+# Karena clustering tidak menggunakan kolom kabupaten maka dari itu hanya diambil data numeriknya saja, dan data numerik berada dikolom 2 sampai 5
+
+## Standarisasi Data
+```{r}
+data_scaled <- scale(data_numeric)
+
+data_scaled
+```
+# Standarisasi dilakukan agar seluruh variabel memiliki skala yang sebanding sehingga tidak ada variabel yang mendominasi proses clustering, kalau tidak distandarisasi nanti clustering jadi bias
+
+## Menghitung Jarak 
+```{r}
+dist_matrix <- dist(data_scaled,
+                    method = "euclidean")
+
+dist_matrix
+```
+
+## Hierarchial Clustering
+```{r}
+hc <- hclust(dist_matrix,
+             method = "ward.D2")
+
+hc
+```
+# Hierarchial clustering dilakukan menggunakan metode ward dengan jarak euclidean untuk mengelompokkan wilayah berdasarkan kemiripan karakteristik sosial dan ekonomi
+
+```{r}
+plot(hc,
+     labels = cluster_diy$Kabupaten,
+     main = "Dendrogram Hierarchical Clustering",
+     xlab = "Kabupaten/Kota",
+     ylab = "Height",
+     sub = "")
+rect.hclust(hc,
+            k = 2,
+            border = "red")
+```
+
+# Dendrogram digunakan untuk melihat struktut pengelompokan wilayah dan menentukan jumlah cluster yang terbentuk. Berdasarkan dendrogram hierarchical clustering, kabupaten/kota di D.I. Yogyakarta terbagi menjadi dua cluster utama. Cluster pertama terdiri atas Kulon Progo dan Gunungkidul yang memiliki karakteristik tingkat kemiskinan relatif lebih tinggi, IPM lebih rendah, serta kepadatan penduduk yang lebih rendah dibanding wilayah lainnya. Sementara itu, cluster kedua terdiri atas Bantul, Sleman, dan Kota Yogyakarta yang menunjukkan karakteristik wilayah dengan tingkat pembangunan manusia lebih tinggi, tingkat kemiskinan lebih rendah, dan kondisi sosial-ekonomi yang lebih baik. Selain itu, Bantul dan Sleman memiliki jarak yang paling dekat pada dendrogram sehingga menunjukkan tingkat kemiripan karakteristik yang tinggi.
+
+
+```{r}
+cluster_diy$Cluster_HC <- cutree(hc, k = 2)
+
+cluster_diy$Label_HC <- ifelse(cluster_diy$Cluster_HC == 1,
+                               "Wilayah Berkembang",
+                               "Wilayah Maju")
+
+cluster_diy
+```
+# Hasil hierarchical clustering kemudian digunakan untuk membentuk kelompok wilayah menggunakan fungsi 'cutree()'. Pada penelitian kali ini dipilih sebanyak 2 cluster berdasarkan hasil dendrogram. Selanjutnya setiap cluster diberikan label interpretatif agar lebih mudah dipahami, yaitu "wilayah berkembang" dan "wilayah maju". Label tersebut diberikan berdasarkan karakteristik masing-masing cluster. Wilayah dengan tingkat kemiskinan lebih tinggi dan IPM lebih rendah dikategorikan sebagai “Wilayah Berkembang”, sedangkan wilayah dengan tingkat pembangunan manusia lebih tinggi dan kondisi sosial-ekonomi yang lebih baik dikategorikan sebagai “Wilayah Maju”.
+
+## K-Means Clustering
+# Metode K-Means Clustering digunakan untuk mengelompokkan wilayah berdasarkan centroid cluster yang terbentuk. Pada penelitian ini digunakan sebanyak 2 cluster agar hasil pengelompokan lebih konsisten dengan hasil hierarchical clustering dan lebih mudah diinterpretasikan.
+## Menentukan seed agar hasil tetap atau konsisten
+```{r}
+set.seed(123)
+```
+
+
+## Membuat model K-Means
+```{r}
+kmeans_result <- kmeans(data_scaled,
+                        centers = 2,
+                        nstart = 25)
+kmeans_result
+```
+# Metode K-Means digunakan untuk membagi wilayah ke dalam beberapa cluster berdasarkan centroid yang terbentuk.
+
+## Hasil clustering kemudian ditambahkan ke dalam dataset untuk melihat pembagian cluster pada masing-masing kabupaten/kota.
+```{r}
+cluster_diy$Cluster_KMeans <- kmeans_result$cluster
+
+cluster_diy
+```
+
+## Setiap cluster kemudian diberikan label interpretatif berdasarkan karakteristik sosial-ekonomi wilayah yang terbentuk.
+```{r}
+cluster_diy$Label_KMeans <- ifelse(cluster_diy$Cluster_KMeans == 1,
+                                   "Wilayah Berkembang",
+                                   "Wilayah Maju")
+
+cluster_diy
+```
+
+
+```{r}
+library(factoextra)
+```
+
+## Visualisasi cluster digunakan untuk melihat pola pengelompokan wilayah berdasarkan hasil K-Means Clustering.
+```{r}
+fviz_cluster(kmeans_result,
+             data = data_scaled,
+             geom = "point",
+             ellipse = FALSE,
+             main = "Visualisasi K-Means Clustering")
+```
+# Berdasarkan visualisasi K-Means Clustering, kabupaten/kota di D.I. Yogyakarta terbagi menjadi dua cluster utama. Cluster pertama menunjukkan wilayah dengan kondisi sosial-ekonomi yang relatif lebih rendah, sedangkan cluster kedua menunjukkan wilayah dengan tingkat pembangunan yang lebih baik. Jarak antar titik menunjukkan tingkat kemiripan karakteristik antar wilayah.
+
+## Elbow Method
+```{r}
+fviz_nbclust(data_scaled,
+             kmeans,
+             method = "wss",
+             k.max = 4) +
+  ggtitle("Elbow Method")
+```
+# Elbow method digunakan untuk menentukan jumlah cluster optimal pada metode K-Means. Berdasarkan grafik elbow method, jumlah cluster optimal diperoleh pada k = 2 karena terjadi penurunan nilai total within sum of squares yang cukup tajam dari k = 1 ke k = 2 dan mulai melandai setelahnya.
+
+## Silhouette Method
+```{r}
+fviz_nbclust(data_scaled,
+             kmeans,
+             method = "silhouette",
+             k.max = 4) +
+  ggtitle("Silhouette Method")
+```
+
+# Silhouette method digunakan untuk mengevaluasi kualitas cluster yang terbentuk. Berdasarkan grafik silhouette method, nilai silhouette tertinggi diperoleh pada k = 3. Namun, penelitian ini tetap menggunakan 2 cluster karena hasil pengelompokan lebih mudah diinterpretasikan dan konsisten dengan hierarchical clustering.
+
+
+```{r}
+library(cluster)
+```
+
+
+```{r}
+sil <- silhouette(kmeans_result$cluster,
+                  dist(data_scaled))
+mean(sil[,3])
+```
+
+## Menghitung rata-rata setiap cluster
+```{r}
+aggregate(data_numeric,
+          by = list(Cluster = cluster_diy$Cluster_KMeans),
+          mean)
+```
+# Hasil evaluasi menggunakan silhouette score memperoleh nilai sebesar 0,37 yang menunjukkan bahwa kualitas clustering tergolong cukup baik.
+
+
+```{r}
+library(clusterSim)
+```
+
+## Menghitung DBI
+```{r}
+index.DB(data_scaled,
+         cluster_diy$Cluster_KMeans)$DB
+```
+# Hasil evaluasi menggunakan Davies-Bouldin Index (DBI) menghasilkan nilai sebesar 0,685. Nilai yang relatif kecil menunjukkan bahwa cluster yang terbentuk memiliki pemisahan yang cukup baik.
+
+##Kesimpulan
+
+#Berdasarkan hasil analisis clustering, kabupaten/kota di D.I. Yogyakarta dapat dikelompokkan menjadi dua cluster utama, yaitu wilayah berkembang dan wilayah maju. Wilayah berkembang memiliki tingkat kemiskinan yang relatif lebih tinggi dan nilai IPM yang lebih rendah, sedangkan wilayah maju memiliki kondisi sosial-ekonomi dan pembangunan manusia yang lebih baik. Berdasarkan hasil evaluasi menggunakan silhouette score dan Davies-Bouldin Index, metode clustering yang digunakan mampu menghasilkan pengelompokan wilayah yang cukup baik.
+
+## Sumber Data
+
+#Data diperoleh dari publikasi “Provinsi Daerah Istimewa Yogyakarta Dalam Angka 2025” yang diterbitkan oleh Badan Pusat Statistik (BPS).
